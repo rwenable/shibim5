@@ -1,0 +1,20 @@
+{
+  "name": "fflate_min",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "exports" : {
+	  "." : "./dist/fflate.js"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "vite": "^5.0.8"
+  },
+  "dependencies": {
+    "fflate": "^0.8.1"
+  }
+}
