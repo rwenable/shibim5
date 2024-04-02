@@ -1,0 +1,17 @@
+{
+  "name": "shibim-js",
+  "collaborators": [
+    "Junias <tkornem@gmail.com>"
+  ],
+  "version": "0.1.0",
+  "files": [
+    "shibim_js_bg.wasm",
+    "shibim_js.js",
+    "shibim_js.d.ts"
+  ],
+  "module": "shibim_js.js",
+  "types": "shibim_js.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ]
+}
