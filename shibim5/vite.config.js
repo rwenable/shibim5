@@ -10,6 +10,6 @@ export default defineConfig({
   }),svelte(),viteSingleFile()],
   build:{
     assetsInlineLimit : 4096*1024,
-    minify : false
+    minify : true
   }
 })
