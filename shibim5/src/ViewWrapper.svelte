@@ -3,7 +3,7 @@
     export let id = "";
     export let kind = "";
     export let hidden = false;
-    import {set_up_local, set_websocket, try_default_websocket, create_websocket, scrollNextSongView, scrollPrevSongView, set_present_channel, setPresentationClick, setSharpSetting, setPresFontSize} from "./lib/song";
+    import {set_up_local, try_default_websocket, create_websocket, scrollNextSongView, scrollPrevSongView, set_present_channel, setPresentationClick, setSharpSetting, setPresFontSize} from "./lib/song";
     import {onMount, createEventDispatcher} from "svelte";
     import {get_presentation_html_string} from "./present";
     import {update_abc} from "./lib/abc"
@@ -112,7 +112,7 @@
       await create_websocket(uri,(success,ws)=>{
         if (success){
           connect_result_text = "✅"
-          set_websocket(ws);
+          set_default_websocket(ws);
           sessionStorage.setItem("ws-server",ws.url);
         }else{
           connect_result_text="⚠️"
@@ -120,7 +120,7 @@
       })
       .then((ws)=>{
         connect_result_text = "✅"
-        set_websocket(ws);
+        set_default_websocket(ws);
         sessionStorage.setItem("ws-server",ws.url);
       })
       .catch((e)=>{

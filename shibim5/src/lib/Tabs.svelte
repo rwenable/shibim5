@@ -2,6 +2,7 @@
     import {createEventDispatcher} from 'svelte'
     export let current = "lists";
     export let tab_save_open = false;
+    export let tab_upload_open = false;
     let tabs = ["lists","songs","search","editor"]
     let tabnames = ["Listas","Canciones","Busqueda","Editor"]
     const dispatch = createEventDispatcher();
@@ -20,10 +21,14 @@
             </button>
     {/each}
     <button on:click={()=>dispatch("download_app",{})}>Descargar</button>
+    <button on:click={()=>dispatch("upload_app",{})}>Subir</button>
     </nav>
 <main>
     {#if tab_save_open}
         <slot name="download"/>
+    {/if}
+    {#if tab_upload_open}
+        <slot name="upload"/>
     {/if}
     {#if current == tabs[0]}
         <slot name="lists"/>

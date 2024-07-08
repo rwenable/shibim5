@@ -4,10 +4,13 @@
     const dispatch = createEventDispatcher();
     export let songs = [];
     export let hidden = true;
+    export let current_page = 1;
+    export let total_pages = 1;
 </script>
 <div class="nav" class:hidden={hidden}>
     <button on:click={()=>dispatch("prev_page")}>Anterior</button>
     <button on:click={()=>dispatch("next_page")}>Siguiente</button>
+    <span>Página {current_page} de {total_pages}</span>
 </div>
 <ul class="songindex" class:hidden={hidden}>
     {#each songs as song }

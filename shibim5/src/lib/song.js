@@ -795,7 +795,7 @@ export async function try_default_websocket(){
     return ws;
 }
 
-export function set_websocket(ws){
+export function set_default_websocket(ws){
     if(websocket){
         websocket.close();
         if (websocket.tid){

@@ -6,6 +6,17 @@ export function deserialize_db(s : string) : Uint8Array {
   return window.libbsc.bsc_decompress_u8(window.fflate.decode_base85(s));
 }
 export async function load_db(sqlite_url : string | undefined = undefined){
+    //Maybe cloudflare
+    if (window.location.protocol === "https:"){
+      let request = await fetch(window.location.origin + "/kvapi/get_latest").catch((_)=>null);
+      if (request){
+        console.debug("Trying to load database from online API");
+        let ab = await request.arrayBuffer().catch((_)=>null);
+        if(ab){
+          return window.libbsc.bsc_decompress_u8(new Uint8Array(ab)).buffer;
+        }
+      }
+    }
     let el = document.getElementById("serialized_db");
     let localdb = await load_db_from_localstorage();
     if (localdb){
@@ -27,7 +38,7 @@ export async function load_db(sqlite_url : string | undefined = undefined){
         sp.id = "serialized_db";
         sp.textContent = serialize_db(new Uint8Array(dup));
         document.body.appendChild(sp);
-        console.log("wrote db to html content");
+        console.debug("wrote db to html content");
         return dup;
     }else{
         console.debug("Trying to load database from HTML element");
