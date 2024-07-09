@@ -553,6 +553,29 @@ ORDER BY rank`;
     recently_viewed_songs = push_queue_unique(evt.detail.name,recently_viewed_songs);
     return result;
   }
+  async function reopen(evt){
+      if(viewer_kind === "shb"){
+        history.replaceState(
+        null,
+        null,
+        window.location.pathname + "?view_s=" + encodeURIComponent(viewer_id),
+      );
+      open_song({detail : {
+        name : viewer_id,
+        silent : true
+      }})
+    }else if (viewer_kind === "lst"){
+      history.replaceState(
+        null,
+        null,
+        window.location.pathname + "?view_l=" + encodeURIComponent(viewer_id),
+      );
+      open_list({detail:{
+        name : viewer_id,
+        silent : true
+      }})
+    }
+  }
   async function edit_list(evt) {
     let src = await get_list_source_by_name(evt.detail.name);
     editor_component.create_document(evt.detail.name, src, "lst", false);
@@ -589,7 +612,6 @@ ORDER BY rank`;
     viewer_component.update_content(result.content.slice(),viewer_params());
     viewer_id = evt.detail.name;
     viewer_kind = "lst";
-    requestAnimationFrame(() => {
       if (!evt.detail.silent) {
         try {
           history.pushState(
@@ -600,7 +622,6 @@ ORDER BY rank`;
         } catch (e) {}
       }
       viewer_open = true;
-    });
     recently_viewed_lists = push_queue_unique(evt.detail.name,recently_viewed_lists);
     //viewer_open = true;
     result.free();
@@ -958,6 +979,7 @@ ${document.getElementById("bsc-wasm").outerHTML}
     on:edit_song={edit_song}
     on:edit_list={edit_list}
     on:shb_modified={viewer_change}
+    on:reopen={reopen}
     hidden={!viewer_open}
     id={viewer_id}
     kind={viewer_kind}
@@ -980,7 +1002,7 @@ ${document.getElementById("bsc-wasm").outerHTML}
         location.reload();
       }}>⚠️ Borrar datos temporales</button
     >
-    <span id="tagname">Shibim 5.0 <i>Axapusco</i></span>
+    <span id="tagname">Shibim 5.1 <i>Nopaltepec</i></span>
   </div>
 </div>
 <svelte:document

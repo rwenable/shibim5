@@ -7,7 +7,7 @@
     import {get_presentation_html_string} from "./present";
     import {update_abc} from "./lib/abc"
     const ENCODE_STR = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuv-._~()*'!"
-    let DECODE_STR = new Uint8Array(ENCODE_STR.length);
+    let DECODE_STR = new Uint8Array(128);
     let no_margin = false;
     let container;
     let font_size = "inherit";
@@ -17,9 +17,9 @@
     let search_cancel = ()=>{};
     let ip_search_text = "..."
     let ip_text = "";
-    let connect_result_text = ""
+    let connect_result_text = "";
+    let has_params = false;
     const dispatch = createEventDispatcher();
-
     function create_slist_repr(){
       let bytes = [];
       for (let song of [...container.getElementsByClassName("u-song")]){
@@ -28,7 +28,10 @@
           continue;
         }
         let tonic = parseInt(song.getAttribute("data-tonic"));
-        let sections = [...song.getElementsByTagName("u-section")]
+        let sections = [...song.getElementsByTagName("u-section")];
+        if (song.hasAttribute("data-collapsed")){
+          tonic += 12;
+        }
         bytes.push(parseInt(pos),sections.length,tonic);
         for(let section of sections){
           let spos = section.getAttribute("data-position");
@@ -64,6 +67,7 @@
       }
       let elem = dom.body.removeChild(dom.body.children[0]);
       if(url_param){
+        has_params = true;
         let bytes = decode_url_param(url_param);
         let cons_elem = elem.cloneNode(false);
         let exit = false;
@@ -71,7 +75,8 @@
         while(i < bytes.length){
           let song = elem.querySelector(`.u-song[data-position='${bytes[i]}']`);
           let len = bytes[i+1];
-          let tonality = bytes[i+2];
+          let tonality = bytes[i+2] % 12;
+          let collapsed = bytes[i+2] >= 12;
           let cons_song = song.cloneNode(false);
           let cons_title = song.querySelector("u-title-box").cloneNode(true);
           cons_song.appendChild(cons_title);
@@ -79,15 +84,19 @@
             let cons_sect = song.querySelector(`[data-position='${bytes[j]}']`).cloneNode(true);
             cons_song.appendChild(cons_sect);
           }
-          i += 3 + len; 
+          if (collapsed){
+            cons_song.setAttribute("data-collapsed","");
+          }
           if(parseInt(song.getAttribute("data-tonic")) != tonality){
             change_note(cons_song, tonality);
           }
+          i += 3 + len; 
           cons_elem.appendChild(cons_song);
         }
         container.replaceChild(cons_elem,container.children[0]);
       }else{
         container.replaceChild(elem,container.children[0]);
+        has_params = false;
       }
       set_up_local(container);
       setPresentationClick(container);
@@ -108,14 +117,12 @@
     }
 
     onMount(() => {
-      window.create_slist_repr = create_slist_repr;
-      window.encode_url_param = encode_url_param;
-      window.decode_url_param = decode_url_param;
       for(let i = 0; i < ENCODE_STR.length; i++){
         DECODE_STR[ENCODE_STR.charCodeAt(i)] = i;
       }
       container.addEventListener("shb_modified",()=>{
         dispatch("shb_modified",{url_param : encode_url_param(create_slist_repr())});
+        has_params = true;
       });
       set_present_channel(container);
       try_default_websocket().then(ws=>sessionStorage.setItem("ws-server",ws.url))
@@ -141,6 +148,9 @@
     function decrement_pres_size(evt){
       pres_font_size -= (2/3)*Math.sqrt(pres_font_size) - 1;
       setPresFontSize(pres_font_size.toString()+"px");
+    }
+    function reopen(){
+      dispatch("reopen",{});
     }
     function rescroll(evt){
       requestAnimationFrame(()=>{
@@ -273,7 +283,11 @@
   {/if}
   </div>
 {#if id}
-  <div class="doc-id-bar" class:hidden>{id}<button on:click={edit_top}>✏️</button></div>
+  <div class="doc-id-bar" class:hidden>{id}<button on:click={edit_top}>✏️</button>
+  {#if has_params}
+    <button on:click={reopen}>♻️</button>
+  {/if}
+  </div>
 {/if}
 <div class="view-container">
   <div
