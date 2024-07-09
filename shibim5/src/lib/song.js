@@ -76,7 +76,7 @@ function change_sharps(el, sharps = null){
         change_note(el, 0, 0, sharps);
     }
 }
-function change_note(el, tgt, src = null, sharps = null) {
+export function change_note(el, tgt, src = null, sharps = null) {
     if (src == null) {
         src = find_tonic(el);
     }
@@ -271,7 +271,7 @@ function extractTransposeParams(root){
     songs.forEach((elem)=>{
         let tonic = parseInt(elem.getAttribute("data-tonic"));
         let otonic = parseInt(elem.getAttribute("data-otonic"));
-        let song_id = elem.getAttribute("data-song-id");    
+        let song_id = elem.getAttribute("data-position");    
         let otonic_tr = (otonic + delta + 12) % 12;
         let song_delta = (tonic - otonic_tr+ 12) %12;
         if (song_delta !== 0){
@@ -368,6 +368,10 @@ function setLocalButtons(head) {
         exp[i].addEventListener("click", function () {
             var song = this.closest("u-section, article");
             toggleAttr(song, "data-collapsed");
+            this.dispatchEvent(new CustomEvent("shb_modified",{
+                detail : { type : "close", target : song },
+                bubbles : true
+            }));
         });
     }
 
@@ -378,6 +382,10 @@ function setLocalButtons(head) {
             swapPrev(root);
             root.classList.add("notice");
             setTimeout(() => root.classList.remove("notice"), 1000);
+            this.dispatchEvent(new CustomEvent("shb_modified",{
+                detail : { type : "move_up", target : root },
+                bubbles : true,
+            }));
             if (root.tagName == "ARTICLE") {
                 wait_DOM(function () {
                     if (window.innerHeight > 800) {
@@ -397,6 +405,10 @@ function setLocalButtons(head) {
             swapNext(root);
             root.classList.add("notice");
             setTimeout(() => root.classList.remove("notice"), 1000);
+            this.dispatchEvent(new CustomEvent("shb_modified",{
+                detail : { type : "move_down", target : root },
+                bubbles : true
+            }));
             if (root.tagName == "ARTICLE") {
                 wait_DOM(function () {
                     root.scrollIntoView({ behavior: "instant", block: "nearest" });
@@ -410,6 +422,10 @@ function setLocalButtons(head) {
         edit[i].addEventListener("click", function () {
             let del = this.closest("u-section, article");
             del.parentElement.removeChild(del);
+            head.dispatchEvent(new CustomEvent("shb_modified",{
+                detail : { type : "remove_song", target : del },
+                bubbles : true
+            }));
         });
     }
 
@@ -429,6 +445,10 @@ function createToneButtons() {
         btn.addEventListener("click", function () {
             var song = this.parentNode.parentNode.parentNode;
             change_note(song, i, null, sharp_setting);
+            this.dispatchEvent(new CustomEvent("shb_modified",{
+                detail : { type : "tonality", target : song},
+                bubbles : true
+            }))
             updateTransposeHistory();
             song.removeChild(this.parentNode.parentNode);
         });
@@ -510,7 +530,7 @@ function check_search_params(){
     let songs = Array.from(document.getElementsByClassName("u-song"));
     for (const song of songs){
         let offset = transpose;
-        let song_offset = parseInt(params.get("t"+song.getAttribute("data-song-id")));
+        let song_offset = parseInt(params.get("t"+song.getAttribute("data-position")));
         if (song_offset){
             offset = (offset + song_offset + 12) %12
         }

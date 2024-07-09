@@ -5,7 +5,7 @@ markup::define!(
     Songlist<'i>(list : &'i Vec<base::CompiledSong>){
         div . "u-container"{
             @for (i,song) in list.iter().enumerate(){
-                {CompiledSong{song : song.into(),id: Some(i as u64)}}
+                {CompiledSong{song : song.into(),position: Some(i as u64)}}
             }
         }
     }
@@ -35,15 +35,15 @@ markup::define!(
                     use_flats: base::get_default_use_flat(song.tonality)
                 }}
             }else{
-                @for sblock in &song.sections{
-                    {SongBlock{sblock, use_flats : base::get_default_use_flat(song.tonality)}}
+                @for (i,sblock) in song.sections.iter().enumerate(){
+                    {SongBlock{sblock, use_flats : base::get_default_use_flat(song.tonality), position : Some(i)}}
                 }
             }
         }
 
     }
     
-    CompiledSong<'i>(song: base::SongRef<'i>, id : Option<u64>){
+    CompiledSong<'i>(song: base::SongRef<'i>, position : Option<u64>){
         article . "u-song"[
                 "data-tonic" = song.tonality.tonic,
                 "data-otonic" = song.tonality.tonic,
@@ -57,9 +57,9 @@ markup::define!(
                         ""
                     }
                 },
-                "data-song-id" = {
-                    if let Some(id) = id{
-                        format!("{:X}",id)
+                "data-position" = {
+                    if let Some(position) = position{
+                        format!("{:X}",position)
                     }else{
                         "".to_string()
                     }
@@ -69,8 +69,8 @@ markup::define!(
             @if !song.headless{
                 {SongHeader{name : song.name, tonality : song.tonality}}
             }
-            @for sblock in  song.sections{
-                {SongBlock{sblock,use_flats : base::get_default_use_flat(song.tonality)}}
+            @for (i, sblock) in  song.sections.iter().enumerate(){
+                {SongBlock{sblock,use_flats : base::get_default_use_flat(song.tonality), position : Some(i)}}
             }
         }
     }
@@ -87,9 +87,9 @@ markup::define!(
     }
 
     SongOrder<'i,'b>(sections : &'i Vec<base::SongBlock>,order : &'b Vec<usize>,use_flats : bool){
-        @for may_section in order.iter().map(|x|sections.get(*x)){
+        @for (i,may_section) in order.iter().map(|x|sections.get(*x)).enumerate(){
             @if let Some(base::SongBlock::Section(section)) = may_section{
-                {Section{section, use_flats : *use_flats} }
+                {Section{section, use_flats : *use_flats, position : Some(i)} }
             }else if let Some(base::SongBlock::Annotation(s)) = may_section{
                 //TODO:
                 {eprintln!("Unimplemented compiled annotation!");""}
@@ -99,13 +99,13 @@ markup::define!(
         }
     }
     
-    SongBlock<'i>(sblock : &'i base::SongBlock, use_flats : bool){
+    SongBlock<'i>(sblock : &'i base::SongBlock, use_flats : bool, position : Option<usize>){
         @match sblock{
             base::SongBlock::Section(section) => {
-                {Section{section : section,use_flats : *use_flats}}
+                {Section{section : section, use_flats : *use_flats, position : *position}}
             }
             base::SongBlock::Annotation(annotation) => {
-                $ "u-annotation" {
+                $ "u-annotation" ["data-position" = position]{
                     {annotation}
                 }
             }
@@ -113,11 +113,12 @@ markup::define!(
         }
     }
     
-    Section<'i>(section : &'i base::Section, use_flats : bool){
+    Section<'i>(section : &'i base::Section, use_flats : bool, position : Option<usize>){
         @if let Some(tonality) = section.local_tonality{
             $ "u-section" [
                 "data-id" = &section.name,
                 "data-tonic" = tonality.tonic,
+                "data-position" = position.map(|i|i.to_string()),
                 "data-mode" = {
                         if let base::TonicKind::Minor = tonality.kind{
                             "m"
@@ -148,7 +149,10 @@ markup::define!(
                 }
             }
         }else{
-            $ "u-section" ["data-id" = &section.name, "data-has-abc" = section.has_abc]
+            $ "u-section" [
+                "data-id" = &section.name, "data-has-abc" = section.has_abc,
+                "data-position" = position.map(|i|i.to_string())
+                ]
             {
                 $ "u-title-box"{
                     $ "u-title-background"{

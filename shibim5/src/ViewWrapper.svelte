@@ -1,12 +1,13 @@
 <script>
-    export let content = "";
     export let id = "";
     export let kind = "";
     export let hidden = false;
-    import {set_up_local, try_default_websocket, create_websocket, scrollNextSongView, scrollPrevSongView, set_present_channel, setPresentationClick, setSharpSetting, setPresFontSize} from "./lib/song";
+    import {set_up_local, try_default_websocket, create_websocket, scrollNextSongView, scrollPrevSongView, set_present_channel, setPresentationClick, setSharpSetting, setPresFontSize, change_note} from "./lib/song";
     import {onMount, createEventDispatcher} from "svelte";
     import {get_presentation_html_string} from "./present";
     import {update_abc} from "./lib/abc"
+    const ENCODE_STR = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuv-._~()*'!"
+    let DECODE_STR = new Uint8Array(ENCODE_STR.length);
     let no_margin = false;
     let container;
     let font_size = "inherit";
@@ -18,26 +19,104 @@
     let ip_text = "";
     let connect_result_text = ""
     const dispatch = createEventDispatcher();
-    $: content, requestAnimationFrame(()=>{
-            set_up_local(container);
-            setPresentationClick(container);
-            update_abc(container,false);
-            let songs = container.getElementsByClassName("u-song");
-            for(const song of songs){
-              if (song.hasAttribute("data-id")){
-                const bar = song.getElementsByClassName("util-buttons-box")[0];
-                let btn = document.createElement("button");
-                btn.textContent = "✏️";
-                btn.className = "edit-button";
-                btn.addEventListener("click",()=>{
-                  dispatch("edit_song",{name:song.getAttribute("data-id")});
-                  
-                });
-                bar.appendChild(btn);
-              }
-            }
-        });
+
+    function create_slist_repr(){
+      let bytes = [];
+      for (let song of [...container.getElementsByClassName("u-song")]){
+        let pos = song.getAttribute("data-position");
+        if (!pos){
+          continue;
+        }
+        let tonic = parseInt(song.getAttribute("data-tonic"));
+        let sections = [...song.getElementsByTagName("u-section")]
+        bytes.push(parseInt(pos),sections.length,tonic);
+        for(let section of sections){
+          let spos = section.getAttribute("data-position");
+          if (spos){
+            bytes.push(parseInt(spos));
+          }
+        }
+      }
+      return bytes;
+    }
+    function encode_url_param(bytes){
+      let out = "";
+      for(let i = 0; i < bytes.length; i++){
+        out += ENCODE_STR.charAt(bytes[i]);
+      }
+      return out;
+    }
+
+    function decode_url_param(str){
+      let out = [];
+      for(let i = 0; i< str.length; i++){
+        out.push(DECODE_STR[str.charCodeAt(i)]);
+      }
+      return out;
+    }
+    export function update_content(content, url_param = null){
+      if(!content){
+        return;
+      }
+      let dom = (new DOMParser()).parseFromString(content,"text/html");
+      if(!dom.body || !dom.body.children[0]){
+        return;
+      }
+      let elem = dom.body.removeChild(dom.body.children[0]);
+      if(url_param){
+        let bytes = decode_url_param(url_param);
+        let cons_elem = elem.cloneNode(false);
+        let exit = false;
+        let i = 0;
+        while(i < bytes.length){
+          let song = elem.querySelector(`.u-song[data-position='${bytes[i]}']`);
+          let len = bytes[i+1];
+          let tonality = bytes[i+2];
+          let cons_song = song.cloneNode(false);
+          let cons_title = song.querySelector("u-title-box").cloneNode(true);
+          cons_song.appendChild(cons_title);
+          for(let j = i+3;j < i + 3 + len;j++){
+            let cons_sect = song.querySelector(`[data-position='${bytes[j]}']`).cloneNode(true);
+            cons_song.appendChild(cons_sect);
+          }
+          i += 3 + len; 
+          if(parseInt(song.getAttribute("data-tonic")) != tonality){
+            change_note(cons_song, tonality);
+          }
+          cons_elem.appendChild(cons_song);
+        }
+        container.replaceChild(cons_elem,container.children[0]);
+      }else{
+        container.replaceChild(elem,container.children[0]);
+      }
+      set_up_local(container);
+      setPresentationClick(container);
+      update_abc(container,false);
+      let songs = container.getElementsByClassName("u-song");
+      for(const song of songs){
+        if (song.hasAttribute("data-id")){
+          const bar = song.getElementsByClassName("util-buttons-box")[0];
+          let btn = document.createElement("button");
+          btn.textContent = "✏️";
+          btn.className = "edit-button";
+          btn.addEventListener("click",()=>{
+            dispatch("edit_song",{name:song.getAttribute("data-id")});
+          });
+          bar.appendChild(btn);
+        }
+      }
+    }
+
     onMount(() => {
+      window.create_slist_repr = create_slist_repr;
+      window.encode_url_param = encode_url_param;
+      window.decode_url_param = decode_url_param;
+      for(let i = 0; i < ENCODE_STR.length; i++){
+        DECODE_STR[ENCODE_STR.charCodeAt(i)] = i;
+      }
+      container.addEventListener("shb_modified",()=>{
+        dispatch("shb_modified",{url_param : encode_url_param(create_slist_repr())});
+      });
       set_present_channel(container);
       try_default_websocket().then(ws=>sessionStorage.setItem("ws-server",ws.url))
       .catch(()=>console.log("Could not connect to websocket server"));
@@ -206,7 +285,7 @@
     bind:this={container}
     data-nomargin={no_margin?true:null}
   >
-    {@html content}
+  <div></div>
   </div>
 </div>
 <svelte:document on:keydown2={keypress}/>

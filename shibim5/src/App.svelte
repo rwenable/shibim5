@@ -520,10 +520,23 @@ ORDER BY rank`;
       })
     ).result.resultRows;
   }
+  function viewer_change(evt){
+    let query = new URLSearchParams(window.location.search);
+    query.set("m",evt.detail.url_param);
+    history.replaceState(
+      null,
+      null,
+      window.location.pathname + "?" + query.toString()
+    );
+  }
+  function viewer_params(){
+    let query = new URLSearchParams(window.location.search);
+    return query.get("m");
+  }
   async function open_song(evt) {
     let src = await get_song_source_by_name(evt.detail.name);
     let result = shb_to_html(src);
-    viewer_content = result.content.slice();
+    viewer_component.update_content(result.content.slice(),viewer_params());
     viewer_id = evt.detail.name;
     viewer_kind = "shb";
     if (!evt.detail.silent) {
@@ -531,7 +544,7 @@ ORDER BY rank`;
         history.pushState(
           null,
           null,
-          "?view_s=" + encodeURIComponent(evt.detail.name),
+          window.location.pathname + "?view_s=" + encodeURIComponent(evt.detail.name),
         );
       } catch (e) {}
     }
@@ -548,7 +561,7 @@ ORDER BY rank`;
         history.pushState(
           null,
           null,
-          "?edit_l=" + encodeURIComponent(evt.detail.name),
+          window.location.pathname + "?edit_l=" + encodeURIComponent(evt.detail.name),
         );
       } catch (e) {}
     }
@@ -573,7 +586,7 @@ ORDER BY rank`;
   async function open_list(evt) {
     let src = await get_list_source_by_name(evt.detail.name);
     let result = await lst_to_html(src);
-    viewer_content = result.content.slice();
+    viewer_component.update_content(result.content.slice(),viewer_params());
     viewer_id = evt.detail.name;
     viewer_kind = "lst";
     requestAnimationFrame(() => {
@@ -641,6 +654,7 @@ ORDER BY rank`;
     tabs_component.change_tab_silent("lists");
     viewer_open = false;
   }
+
   function change_tab(evt) {
     if (new URLSearchParams(window.location.search).has("index")) {
       history.replaceState(null, null, "?index=" + evt.detail.name);
@@ -943,7 +957,7 @@ ${document.getElementById("bsc-wasm").outerHTML}
     bind:this={viewer_component}
     on:edit_song={edit_song}
     on:edit_list={edit_list}
-    content={viewer_content}
+    on:shb_modified={viewer_change}
     hidden={!viewer_open}
     id={viewer_id}
     kind={viewer_kind}

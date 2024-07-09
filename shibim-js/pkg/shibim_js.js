@@ -778,12 +778,12 @@ async function __wbg_load(module, imports) {
 function __wbg_get_imports() {
     const imports = {};
     imports.wbg = {};
-    imports.wbg.__wbg_shb_return_new = function(arg0) {
-        const ret = SHB_Return.__wrap(arg0);
-        return addHeapObject(ret);
-    };
     imports.wbg.__wbg_lst_return_new = function(arg0) {
         const ret = LST_Return.__wrap(arg0);
+        return addHeapObject(ret);
+    };
+    imports.wbg.__wbg_shb_full_return_new = function(arg0) {
+        const ret = SHB_Full_Return.__wrap(arg0);
         return addHeapObject(ret);
     };
     imports.wbg.__wbg_parsingerror_new = function(arg0) {
@@ -794,8 +794,8 @@ function __wbg_get_imports() {
         const ret = SHB_DB_Return.__wrap(arg0);
         return addHeapObject(ret);
     };
-    imports.wbg.__wbg_shb_full_return_new = function(arg0) {
-        const ret = SHB_Full_Return.__wrap(arg0);
+    imports.wbg.__wbg_shb_return_new = function(arg0) {
+        const ret = SHB_Return.__wrap(arg0);
         return addHeapObject(ret);
     };
     imports.wbg.__wbindgen_object_drop_ref = function(arg0) {
@@ -914,8 +914,8 @@ function __wbg_get_imports() {
     imports.wbg.__wbindgen_throw = function(arg0, arg1) {
         throw new Error(getStringFromWasm0(arg0, arg1));
     };
-    imports.wbg.__wbindgen_closure_wrapper250 = function(arg0, arg1, arg2) {
-        const ret = makeMutClosure(arg0, arg1, 50, __wbg_adapter_18);
+    imports.wbg.__wbindgen_closure_wrapper255 = function(arg0, arg1, arg2) {
+        const ret = makeMutClosure(arg0, arg1, 54, __wbg_adapter_18);
         return addHeapObject(ret);
     };
 
