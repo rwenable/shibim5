@@ -50,6 +50,7 @@
   let max_recent = 4;
   let cf_secret = "";
   let password_error = false;
+  let first_load_complete = false;
   async function update_totals() {
     let res = (
       await sql_promiser({
@@ -60,8 +61,10 @@
         },
       })
     ).result.resultRows;
-    total_songs = res[0][0];
-    total_lists = res[1][0];
+    return { 
+      total_songs : res[0][0],
+      total_lists : res[1][0]
+    }
   }
   async function exec_db(args) {
     return (
@@ -274,6 +277,7 @@ inner join songs s on ss.name = s.name;
           sql_worker.addEventListener("message", db_load_listener);
           sql_worker.postMessage({ type: "load", args: { payload: ab } }, [ab]);
         }
+        first_load_complete = true;
       });
 
     /*
@@ -292,7 +296,8 @@ inner join songs s on ss.name = s.name;
       */
     window.__SHB_API__ = {};
     window.__SHB_API__.get_song_source_by_name = get_song_source_by_name;
-    window.sql_promiser = sql_promiser;
+    window.__SHB_API__.sql_promiser = sql_promiser;
+    window.__SHB_API__.fetch_list_index = fetch_list_index;
     //window.store_db_to_localstorage = store_db_to_localstorage;
     //window.load_db_from_localstorage = load_db_from_localstorage;
     //window.write_db_to_html = write_db_to_html;
@@ -334,8 +339,47 @@ inner join songs s on ss.name = s.name;
     return db;
     */
   }
+  async function fetch_list_index(i_per_page,page){
+    let entries = await exec_db({
+      sql : 
+`select l.id, l.name, s.title from 
+(SELECT * from lists order by name desc limit $lim offset $off  ) l
+join lists_songs ls on l.id = ls.list
+JOIN songs s ON ls.song = s.id
+order by l.name desc, ls.position`,
+      bind: {
+        $lim: i_per_page,
+        $off: page * items_per_page,
+      },
+      returnValue: "resultRows"
+    });
+    let c_id = -1;
+    let list_arr = []
+    for(let entry of entries){
+      if (entry[0] !== c_id){
+        list_arr.push({
+          name : entry[1],
+          songs : [entry[2]]
+        })
+        c_id = entry[0]
+      }else{
+        list_arr[list_arr.length-1].songs.push(entry[2]);
+      }
+    }
+    return list_arr;
+  }
   async function update_index() {
-    await update_totals();
+    /** Too slow, perhaps render on demand, and songs/list separatedly
+     * Also a single query might be better
+     * select l.id, l.name, ls.song, ls.position, s.title from 
+        (SELECT * from lists order by name desc limit 5 offset 0  ) l
+        join lists_songs ls on l.id = ls.list
+        JOIN songs s ON ls.song = s.id
+        order by l.name, ls.position
+    */
+
+
+    let totals = await update_totals();
     let song_arr = (
       await sql_promiser("exec", {
         sql: "select name, title, subtitle, tonic, tonic_kind, sections from songs limit $lim offset $off",
@@ -351,35 +395,12 @@ inner join songs s on ss.name = s.name;
       element.sections = element.sections.split("\n");
     });
 
-    let list_arr = (
-      await sql_promiser("exec", {
-        sql: "select id, name from lists order by name desc limit $lim offset $off",
-        bind: {
-          $lim: items_per_page,
-          $off: current_list_page * items_per_page,
-        },
-        rowMode: "object",
-        returnValue: "resultRows",
-      })
-    ).result.resultRows;
+    let list_arr = await fetch_list_index(items_per_page,current_list_page)
 
-    for (let list of list_arr) {
-      let songs = (
-        await sql_promiser("exec", {
-          sql: `
-select s.title from lists_songs ls
-join songs s on s.id = ls.song
-where ls.list = $list
-order by ls.position`,
-          bind: { $list: list.id },
-          rowMode: "array",
-          returnValue: "resultRows",
-        })
-      ).result.resultRows;
-      list.songs = songs.map((r) => r[0]);
-    }
     list_index = list_arr;
     song_index = song_arr;
+    total_lists = totals.total_lists;
+    total_songs = totals.total_songs;
   }
   async function get_song_source_by_name(name) {
     let result = (
@@ -974,6 +995,7 @@ ${document.getElementById("bsc-wasm").outerHTML}
   {#if progress < 100}
     <Progress {progress}></Progress>
   {/if}
+  {#if first_load_complete}
   <ViewWrapper
     bind:this={viewer_component}
     on:edit_song={edit_song}
@@ -1004,6 +1026,7 @@ ${document.getElementById("bsc-wasm").outerHTML}
     >
     <span id="tagname">Shibim 5.1 <i>Nopaltepec</i></span>
   </div>
+  {/if}
 </div>
 <svelte:document
   on:visibilitychange={async () => {

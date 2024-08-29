@@ -237,7 +237,7 @@
       ) 
     }
 </script>
-<div class="bottom-toolbar">
+<div class="bottom-toolbar" class:hidden>
   <button on:click={open_presentation_page}>Presentación</button>
   {#if opened_presentation}
   <fieldset>
